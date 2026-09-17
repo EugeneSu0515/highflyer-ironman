@@ -13,9 +13,13 @@
 ## 怎麼跑
 
 ```bash
+git clone --branch day03 https://github.com/EugeneSu0515/highflyer-ironman.git
+cd highflyer-ironman
 dotnet test                             # 產生器的規則測試（根目錄有 Ironman.slnx）
 dotnet run --project src/Ironman.Desk   # 第一版櫃檯程式
 ```
+
+想看某一天的狀態，就 checkout 那一天的 tag；`main` 永遠是最新的一天。
 
 ## 目前有什麼
 
