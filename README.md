@@ -4,7 +4,7 @@
 
 一家單店的租書店，從紙本出租卡開始，三十天走到 SQLite。每一天對應一個 tag，取得出來、跑得起來，也可以和前一天比對差異。
 
-文章在 iThome，作者 eugenesu0515。完整版教學在 [highflyer.info](https://highflyerinfo.com)。
+文章在 iThome，作者 eugenesu0515。
 
 ## 需要什麼
 
