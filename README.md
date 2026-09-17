@@ -28,6 +28,7 @@ dotnet run --project src/Ironman.Desk   # 第一版櫃檯程式
 | `src/Ironman.SeedData` | 種子資料產生器。固定隨機種子，同一個 seed 在任何機器上產生同一家店 |
 | `src/Ironman.Desk` | 第一版櫃檯程式，資料只活在記憶體裡 |
 | `tests/Ironman.SeedData.Tests` | 產生器不能破的規則 |
+| `tests/Ironman.Desk.Tests` | 借出與歸還的規則 |
 
 ## 關於種子資料
 
@@ -40,6 +41,7 @@ dotnet run --project src/Ironman.Desk   # 第一版櫃檯程式
 | tag | 對應 |
 |---|---|
 | `day03` | 種子資料產生器＋第一版櫃檯 |
+| `day04` | 四條借還規則、十條測試 |
 
 ## 授權
 
