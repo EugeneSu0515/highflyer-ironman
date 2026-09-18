@@ -6,9 +6,10 @@ namespace Ironman.Desk.Tests;
 public class RentalDeskTests
 {
     // 測試不用種子資料，自己造三本書、兩位會員，規則才看得清楚。
-    private static readonly Book 書A = new("9780000000001", "書A", "作者甲");
-    private static readonly Book 書B = new("9780000000002", "書B", "作者乙");
-    private static readonly Book 書C = new("9780000000003", "書C", "作者丙");
+    // ISBN 的檢查碼是算過的：假資料也守自己的規則，之後加上格式驗證才不會連累這些測試。
+    private static readonly Book 書A = new("9780000000002", "書A", "作者甲");
+    private static readonly Book 書B = new("9780000000019", "書B", "作者乙");
+    private static readonly Book 書C = new("9780000000026", "書C", "作者丙");
     private static readonly Member 小明 = new("M00001", "小明", "0911-000-001");
     private static readonly Member 小華 = new("M00002", "小華", "0911-000-002");
     private static readonly DateOnly 今天 = new(2026, 1, 5);
@@ -53,7 +54,7 @@ public class RentalDeskTests
     [Fact]
     public void 同一本書借出中不能再借給別人()
     {
-        // 這是紙卡時代兩位店員最容易出的錯，也是這一版最重要的規則。
+        // 目前模型最不能破的規則：每種書只有一本，同一時間只能有一筆未歸還。
         var desk = 空櫃檯();
         desk.Lend(小明.MemberId, 書A.Isbn, 今天);
 
