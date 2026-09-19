@@ -29,6 +29,8 @@ dotnet run --project src/Ironman.Desk   # 第一版櫃檯程式
 | `src/Ironman.Desk` | 第一版櫃檯程式，資料只活在記憶體裡 |
 | `tests/Ironman.SeedData.Tests` | 產生器不能破的規則 |
 | `tests/Ironman.Desk.Tests` | 借出與歸還的規則 |
+| `tools/Ironman.SeedData.Cli` | 把種子資料印成 CSV／紙卡，只寫到標準輸出 |
+| `tools/spreadsheet` | 第五天的試算表版（同一組 S 規模資料） |
 
 ## 關於種子資料
 
@@ -42,6 +44,7 @@ dotnet run --project src/Ironman.Desk   # 第一版櫃檯程式
 |---|---|
 | `day03` | 種子資料產生器＋第一版櫃檯 |
 | `day04` | 借還規則的十條測試 |
+| `day05` | 試算表版試作與 CSV 匯出 |
 
 ## 授權
 

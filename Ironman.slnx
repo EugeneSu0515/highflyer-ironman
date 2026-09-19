@@ -3,4 +3,5 @@
   <Project Path="src/Ironman.Desk/Ironman.Desk.csproj" />
   <Project Path="tests/Ironman.SeedData.Tests/Ironman.SeedData.Tests.csproj" />
   <Project Path="tests/Ironman.Desk.Tests/Ironman.Desk.Tests.csproj" />
+  <Project Path="tools/Ironman.SeedData.Cli/Ironman.SeedData.Cli.csproj" />
 </Solution>
