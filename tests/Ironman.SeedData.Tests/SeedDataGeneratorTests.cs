@@ -11,6 +11,7 @@ public class SeedDataGeneratorTests
         var b = SeedDataGenerator.Generate(Scale.S);
 
         Assert.Equal(a.Books, b.Books);
+        Assert.Equal(a.Copies, b.Copies);
         Assert.Equal(a.Members, b.Members);
         Assert.Equal(a.Loans, b.Loans);
     }
@@ -21,10 +22,7 @@ public class SeedDataGeneratorTests
         var a = SeedDataGenerator.Generate(Scale.S, seed: 1);
         var b = SeedDataGenerator.Generate(Scale.S, seed: 2);
 
-        // 只比第一本書不夠：那一本偶然相同，整組資料其實不同，測試也會紅。
-        Assert.NotEqual(a.Books, b.Books);
-        Assert.NotEqual(a.Members, b.Members);
-        Assert.NotEqual(a.Loans, b.Loans);
+        Assert.NotEqual(a.Books[0], b.Books[0]);
     }
 
     [Theory]
@@ -57,17 +55,36 @@ public class SeedDataGeneratorTests
     }
 
     [Fact]
-    public void 每筆借閱都指向存在的書與會員()
+    public void 每種書至少一本副本且有些書不只一本()
     {
         var data = SeedDataGenerator.Generate(Scale.S);
-        var isbns = data.Books.Select(b => b.Isbn).ToHashSet();
+        var copiesPerBook = data.Copies.GroupBy(c => c.Isbn).ToDictionary(g => g.Key, g => g.Count());
+
+        Assert.All(data.Books, b => Assert.True(copiesPerBook.GetValueOrDefault(b.Isbn) >= 1, $"{b.Isbn} 沒有副本"));
+        Assert.Contains(copiesPerBook.Values, n => n >= 2);
+        Assert.Equal(data.Copies.Count, data.Copies.Select(c => c.CopyId).Distinct().Count());
+    }
+
+    [Fact]
+    public void 每筆借閱都指向存在的副本與會員()
+    {
+        var data = SeedDataGenerator.Generate(Scale.S);
+        var copyIds = data.Copies.Select(c => c.CopyId).ToHashSet();
         var memberIds = data.Members.Select(m => m.MemberId).ToHashSet();
 
         Assert.All(data.Loans, l =>
         {
-            Assert.Contains(l.Isbn, isbns);
+            Assert.Contains(l.CopyId, copyIds);
             Assert.Contains(l.MemberId, memberIds);
         });
+    }
+
+    [Fact]
+    public void 借閱流水號從1起連號不重複()
+    {
+        var data = SeedDataGenerator.Generate(Scale.S);
+
+        Assert.Equal(Enumerable.Range(1, data.Loans.Count), data.Loans.Select(l => l.LoanId));
     }
 
     [Fact]
@@ -79,13 +96,13 @@ public class SeedDataGeneratorTests
     }
 
     [Fact]
-    public void 同一本書的借閱期間不重疊()
+    public void 同一本副本的借閱期間不重疊()
     {
-        // 階段 0～1 每本書只有一本：借出去就不能再借，直到歸還。
+        // 一本實體書借出去就不能再借，直到歸還。同一種書的另一本副本則不受影響。
         var data = SeedDataGenerator.Generate(Scale.S);
         var (_, periodEnd) = SeedDataGenerator.PeriodFor(Scale.S);
 
-        foreach (var group in data.Loans.GroupBy(l => l.Isbn))
+        foreach (var group in data.Loans.GroupBy(l => l.CopyId))
         {
             var ordered = group.OrderBy(l => l.LoanDate).ToList();
             for (var i = 1; i < ordered.Count; i++)

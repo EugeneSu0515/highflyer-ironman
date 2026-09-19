@@ -3,6 +3,13 @@ namespace Ironman.SeedData;
 /// <summary>書目資料。對應紙卡：借閱卡上緣的書名、作者、ISBN。</summary>
 public sealed record Book(string Isbn, string Title, string Author);
 
+/// <summary>
+/// 館藏副本：店裡的一本實體書。同一個 ISBN 買了兩本，就是兩個 BookCopy。
+/// <see cref="CopyId"/> 是貼在書背上的條碼編號，店員借還時掃的是它，不是 ISBN。
+/// </summary>
+/// <remarks>#02 進場。在此之前每種書只有一本，Loan 直接指向 ISBN 就夠了。</remarks>
+public sealed record BookCopy(string CopyId, string Isbn);
+
 /// <summary>會員。對應紙卡：會員卡上的會員編號、姓名、電話。</summary>
 public sealed record Member(string MemberId, string Name, string Phone);
 
@@ -11,18 +18,20 @@ public sealed record Member(string MemberId, string Name, string Phone);
 /// <see cref="ReturnDate"/> 為 null 表示尚未歸還。
 /// </summary>
 /// <remarks>
-/// 階段 0～1 只有 Book，沒有館藏副本（BookCopy），所以這裡以 ISBN 指向書目。
-/// 「同一本書買了兩本」的問題會在 #02 出現，Loan 也會在那一篇改為指向 BookCopy。
+/// #02 起 Loan 指向 <see cref="BookCopy"/> 而不是 ISBN，並且有自己的流水號 <see cref="LoanId"/>：
+/// 有了副本之後，同一位會員同一天可能借同一種書的兩本，欄位會完全一樣，
+/// 沒有自己的編號就分不出是哪一筆（#01.2 的 IndexOf 假設在此失效）。
 /// </remarks>
-public sealed record Loan(string MemberId, string Isbn, DateOnly LoanDate, DateOnly? ReturnDate)
+public sealed record Loan(int LoanId, string MemberId, string CopyId, DateOnly LoanDate, DateOnly? ReturnDate)
 {
     public bool IsReturned => ReturnDate is not null;
 }
 
-/// <summary>一組種子資料。三個集合之間的參照（MemberId、Isbn）保證存在。</summary>
+/// <summary>一組種子資料。集合之間的參照（MemberId、Isbn、CopyId）保證存在。</summary>
 public sealed record SeedDataSet(
     Scale Scale,
     int Seed,
     IReadOnlyList<Book> Books,
+    IReadOnlyList<BookCopy> Copies,
     IReadOnlyList<Member> Members,
     IReadOnlyList<Loan> Loans);

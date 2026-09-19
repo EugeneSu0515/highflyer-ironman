@@ -38,11 +38,12 @@ public static class SeedDataGenerator
         var random = new Random(seed);
 
         var books = GenerateBooks(random, profile.Books);
+        var copies = GenerateCopies(random, books);
         var members = GenerateMembers(random, profile.Members);
         var (periodStart, periodEnd) = PeriodFor(scale);
-        var loans = GenerateLoans(random, books, members, profile.Loans, periodStart, periodEnd);
+        var loans = GenerateLoans(random, copies, members, profile.Loans, periodStart, periodEnd);
 
-        return new SeedDataSet(scale, seed, books, members, loans);
+        return new SeedDataSet(scale, seed, books, copies, members, loans);
     }
 
     // ---------------------------------------------------------------- Books
@@ -68,6 +69,39 @@ public static class SeedDataGenerator
         return books;
     }
 
+    // --------------------------------------------------------------- Copies
+
+    /// <summary>
+    /// 館藏副本。每種書至少一本；約 15% 的書有第二本、約 3% 有第三本——這就是 #02 的觸發事件。
+    /// 條碼編號 C00001 起依書目順序連號，貼在書背上，店員掃的是它。
+    /// </summary>
+    private static List<BookCopy> GenerateCopies(Random random, IReadOnlyList<Book> books)
+    {
+        var copies = new List<BookCopy>(books.Count + books.Count / 5);
+        var next = 1;
+
+        foreach (var book in books)
+        {
+            var count = 1;
+            var roll = random.Next(100);
+            if (roll < 3)
+            {
+                count = 3;
+            }
+            else if (roll < 15)
+            {
+                count = 2;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                copies.Add(new BookCopy($"C{next++:D5}", book.Isbn));
+            }
+        }
+
+        return copies;
+    }
+
     // -------------------------------------------------------------- Members
 
     private static List<Member> GenerateMembers(Random random, int count)
@@ -89,42 +123,42 @@ public static class SeedDataGenerator
 
     /// <summary>
     /// 借閱紀錄的兩個不變量：
-    /// 1. 同一本書（同一 ISBN）的借閱期間不重疊——階段 0～1 每本書只有一本，借出去就沒有第二本。
+    /// 1. 同一本副本（同一 CopyId）的借閱期間不重疊——一本實體書借出去就沒有第二本。
     /// 2. 歸還日不早於借出日。
-    /// 產生方式：每本書維護「下一次可借出的日期」，逐筆往後排。
+    /// 產生方式：每本副本維護「下一次可借出的日期」，逐筆往後排；最後依借出日排序並給流水號。
     /// </summary>
     private static List<Loan> GenerateLoans(
         Random random,
-        IReadOnlyList<Book> books,
+        IReadOnlyList<BookCopy> copies,
         IReadOnlyList<Member> members,
         int count,
         DateOnly periodStart,
         DateOnly periodEnd)
     {
-        var loans = new List<Loan>(count);
-        var nextAvailable = new DateOnly[books.Count];
+        var drafts = new List<(string MemberId, string CopyId, DateOnly LoanDate, DateOnly? ReturnDate)>(count);
+        var nextAvailable = new DateOnly[copies.Count];
         Array.Fill(nextAvailable, periodStart);
 
-        // 兩次借出之間的等待天數上限，依「每本書要在期間內排進幾筆」回推，
+        // 兩次借出之間的等待天數上限，依「每本副本要在期間內排進幾筆」回推，
         // 讓借閱平均分布在整個期間，而不是擠在期間開頭。
         // 第一版固定 0～20 天，S 規模的 500 筆在九月就排完，年底沒有任何未歸還——測試抓到了這件事。
         var periodDays = periodEnd.DayNumber - periodStart.DayNumber;
-        var loansPerBook = (double)count / books.Count;
-        var slotDays = periodDays * 0.85 / loansPerBook;            // 每筆借閱平均佔用的天數（留 15% 餘裕）
+        var loansPerCopy = (double)count / copies.Count;
+        var slotDays = periodDays * 0.85 / loansPerCopy;            // 每筆借閱平均佔用的天數（留 15% 餘裕）
         var maxWaitDays = Math.Max(1, (int)(2 * (slotDays - AverageLoanDays)));
 
         var guard = 0;
 
-        while (loans.Count < count)
+        while (drafts.Count < count)
         {
-            var bookIndex = random.Next(books.Count);
+            var copyIndex = random.Next(copies.Count);
             var member = members[random.Next(members.Count)];
 
-            // 從這本書可借出的日期起，等待 0～maxWaitDays 天後借出
-            var loanDate = nextAvailable[bookIndex].AddDays(random.Next(0, maxWaitDays + 1));
+            // 從這本副本可借出的日期起，等待 0～maxWaitDays 天後借出
+            var loanDate = nextAvailable[copyIndex].AddDays(random.Next(0, maxWaitDays + 1));
             if (loanDate > periodEnd)
             {
-                // 這本書在期間內已經借滿，換一本；guard 避免極端 seed 下無限迴圈
+                // 這本副本在期間內已經借滿，換一本；guard 避免極端 seed 下無限迴圈
                 if (++guard > count * 10)
                 {
                     throw new InvalidOperationException("借閱期間內排不下這麼多筆借閱，請放寬期間或縮小規模。");
@@ -140,18 +174,25 @@ public static class SeedDataGenerator
             if (returnDate > periodEnd || (random.Next(100) < 15 && periodEnd.DayNumber - loanDate.DayNumber < 45))
             {
                 actualReturn = null; // 尚未歸還
-                nextAvailable[bookIndex] = periodEnd.AddDays(1); // 這本書在期間內不再借出
+                nextAvailable[copyIndex] = periodEnd.AddDays(1); // 這本副本在期間內不再借出
             }
             else
             {
-                nextAvailable[bookIndex] = returnDate.AddDays(1);
+                nextAvailable[copyIndex] = returnDate.AddDays(1);
             }
 
-            loans.Add(new Loan(member.MemberId, books[bookIndex].Isbn, loanDate, actualReturn));
+            drafts.Add((member.MemberId, copies[copyIndex].CopyId, loanDate, actualReturn));
         }
 
-        // 依借出日排序，讓輸出像一疊按時間插入的卡片
-        loans.Sort(static (a, b) => a.LoanDate.CompareTo(b.LoanDate));
+        // 依借出日排序，讓輸出像一疊按時間插入的卡片；流水號照這個順序給，1 起算
+        drafts.Sort(static (a, b) => a.LoanDate.CompareTo(b.LoanDate));
+        var loans = new List<Loan>(count);
+        for (var i = 0; i < drafts.Count; i++)
+        {
+            var d = drafts[i];
+            loans.Add(new Loan(i + 1, d.MemberId, d.CopyId, d.LoanDate, d.ReturnDate));
+        }
+
         return loans;
     }
 

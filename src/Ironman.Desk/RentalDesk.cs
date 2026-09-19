@@ -6,94 +6,159 @@ namespace Ironman.Desk;
 /// 櫃檯：借出、歸還、查詢。所有營運規則都在這裡，選單只負責問問題和印結果。
 /// </summary>
 /// <remarks>
-/// 第一版的三個決定，之後每一篇都會回來檢視：
-/// 1. 資料全部放在記憶體的 List 裡，程式關掉就沒了（#03 的問題）。
-/// 2. 每一次查詢都是從頭掃到尾的線性搜尋（#02 的問題）。
-/// 3. 每種書只有一本，所以「這本書借出去了沒」用 ISBN 就能判斷（#02 會被兩本同樣的書打破）。
+/// #02 的兩個改變：
+/// 1. 借還的對象從「書目（ISBN）」變成「副本（CopyId）」——同一種書買了兩本，兩本可以同時在外面。
+/// 2. 查找從 List 線性掃描改成 Dictionary 查表：依副本、依會員各一張，借出與歸還時同步維護。
+///    所有借閱的歷史仍留在 _loans，索引只放「還沒回來的」。
+/// 沒變的：資料還是在記憶體，程式關掉就沒了（#03）。
 /// </remarks>
 public sealed class RentalDesk
 {
-    private readonly List<Book> _books;
-    private readonly List<Member> _members;
-    private readonly List<Loan> _loans;
+    private readonly Dictionary<string, Book> _booksByIsbn;
+    private readonly Dictionary<string, BookCopy> _copiesById;
+    private readonly Dictionary<string, List<BookCopy>> _copiesByIsbn;
+    private readonly Dictionary<string, Member> _membersById;
 
-    public RentalDesk(IEnumerable<Book> books, IEnumerable<Member> members, IEnumerable<Loan> loans)
+    private readonly List<Loan> _loans;
+    private readonly Dictionary<string, Loan> _outstandingByCopy;              // CopyId → 那一筆未歸還
+    private readonly Dictionary<string, List<Loan>> _outstandingByMember;      // MemberId → 手上所有未歸還
+    private int _nextLoanId;
+
+    public RentalDesk(IEnumerable<Book> books, IEnumerable<BookCopy> copies, IEnumerable<Member> members, IEnumerable<Loan> loans)
     {
-        _books = books.ToList();
-        _members = members.ToList();
+        _booksByIsbn = books.ToDictionary(b => b.Isbn);
+        _copiesById = copies.ToDictionary(c => c.CopyId);
+        _copiesByIsbn = _copiesById.Values.GroupBy(c => c.Isbn).ToDictionary(g => g.Key, g => g.ToList());
+        _membersById = members.ToDictionary(m => m.MemberId);
+
         _loans = loans.ToList();
+        _outstandingByCopy = new Dictionary<string, Loan>();
+        _outstandingByMember = new Dictionary<string, List<Loan>>();
+        foreach (var loan in _loans.Where(l => !l.IsReturned))
+        {
+            Index(loan);
+        }
+
+        _nextLoanId = _loans.Count == 0 ? 1 : _loans.Max(l => l.LoanId) + 1;
     }
 
-    public static RentalDesk FromSeed(SeedDataSet data) => new(data.Books, data.Members, data.Loans);
+    public static RentalDesk FromSeed(SeedDataSet data) => new(data.Books, data.Copies, data.Members, data.Loans);
 
-    public int BookCount => _books.Count;
-    public int MemberCount => _members.Count;
+    public int BookCount => _booksByIsbn.Count;
+    public int CopyCount => _copiesById.Count;
+    public int MemberCount => _membersById.Count;
     public int LoanCount => _loans.Count;
+    public int OutstandingCount => _outstandingByCopy.Count;
 
     // ------------------------------------------------------------ 查詢
 
-    public Book? FindBook(string isbn) => _books.FirstOrDefault(b => b.Isbn == isbn);
+    public Book? FindBook(string isbn) => _booksByIsbn.GetValueOrDefault(isbn);
 
-    public Member? FindMember(string memberId) => _members.FirstOrDefault(m => m.MemberId == memberId);
+    public BookCopy? FindCopy(string copyId) => _copiesById.GetValueOrDefault(copyId);
 
-    /// <summary>用書名的一部分找書。紙卡時代這件事叫「憑印象翻」。</summary>
+    public Member? FindMember(string memberId) => _membersById.GetValueOrDefault(memberId);
+
+    /// <summary>用書名的一部分找書。這個查詢還是線性掃描——它沒有可以當 key 的東西。</summary>
     public IReadOnlyList<Book> SearchBooks(string keyword) =>
-        _books.Where(b => b.Title.Contains(keyword, StringComparison.Ordinal)).ToList();
+        _booksByIsbn.Values.Where(b => b.Title.Contains(keyword, StringComparison.Ordinal)).OrderBy(b => b.Isbn, StringComparer.Ordinal).ToList();
 
-    /// <summary>這本書現在在店裡嗎？沒有任何一筆未歸還的借閱就是在。</summary>
-    public bool IsAvailable(string isbn) => OutstandingLoanOf(isbn) is null;
+    /// <summary>這種書店裡有幾本副本。</summary>
+    public IReadOnlyList<BookCopy> CopiesOf(string isbn) =>
+        _copiesByIsbn.TryGetValue(isbn, out var list) ? list : [];
+
+    /// <summary>這種書現在有哪幾本在店裡可借。</summary>
+    public IReadOnlyList<BookCopy> AvailableCopiesOf(string isbn) =>
+        CopiesOf(isbn).Where(c => IsAvailable(c.CopyId)).ToList();
+
+    /// <summary>這本副本現在在店裡嗎？</summary>
+    public bool IsAvailable(string copyId) => !_outstandingByCopy.ContainsKey(copyId);
+
+    /// <summary>這本副本現在在誰手上（null 表示在店裡）。</summary>
+    public Loan? OutstandingLoanOf(string copyId) => _outstandingByCopy.GetValueOrDefault(copyId);
 
     /// <summary>某位會員手上還沒還的書。</summary>
     public IReadOnlyList<Loan> OutstandingLoansOf(string memberId) =>
-        _loans.Where(l => l.MemberId == memberId && !l.IsReturned).ToList();
+        _outstandingByMember.TryGetValue(memberId, out var list) ? list.OrderBy(l => l.LoanId).ToList() : [];
 
     /// <summary>所有未歸還的借閱，依借出日排序。</summary>
     public IReadOnlyList<Loan> AllOutstanding() =>
-        _loans.Where(l => !l.IsReturned).OrderBy(l => l.LoanDate).ToList();
-
-    private Loan? OutstandingLoanOf(string isbn) =>
-        _loans.FirstOrDefault(l => l.Isbn == isbn && !l.IsReturned);
+        _outstandingByCopy.Values.OrderBy(l => l.LoanDate).ThenBy(l => l.LoanId).ToList();
 
     // ------------------------------------------------------------ 借出
 
-    public Loan Lend(string memberId, string isbn, DateOnly today)
+    public Loan Lend(string memberId, string copyId, DateOnly today)
     {
         var member = FindMember(memberId)
             ?? throw new RentalException($"找不到會員 {memberId}，先確認會員卡上的編號。");
-        var book = FindBook(isbn)
-            ?? throw new RentalException($"找不到 ISBN {isbn} 的書，這本書沒有建檔。");
+        var copy = FindCopy(copyId)
+            ?? throw new RentalException($"找不到條碼 {copyId} 的書，這本書沒有建檔。");
 
-        var outstanding = OutstandingLoanOf(isbn);
-        if (outstanding is not null)
+        if (_outstandingByCopy.TryGetValue(copyId, out var outstanding))
         {
+            var title = _booksByIsbn[copy.Isbn].Title;
             var holder = FindMember(outstanding.MemberId)?.Name ?? outstanding.MemberId;
-            throw new RentalException($"《{book.Title}》已經在 {outstanding.LoanDate:yyyy-MM-dd} 借給 {holder}，還沒回來。");
+            var others = AvailableCopiesOf(copy.Isbn);
+            var hint = others.Count > 0 ? $"店裡還有另一本《{title}》：{string.Join("、", others.Select(c => c.CopyId))}。" : "";
+            throw new RentalException($"條碼 {copyId}《{title}》已經在 {outstanding.LoanDate:yyyy-MM-dd} 借給 {holder}，還沒回來。{hint}");
         }
 
-        var loan = new Loan(member.MemberId, book.Isbn, today, ReturnDate: null);
+        var loan = new Loan(_nextLoanId++, member.MemberId, copy.CopyId, today, ReturnDate: null);
         _loans.Add(loan);
+        Index(loan);
         return loan;
     }
 
     // ------------------------------------------------------------ 歸還
 
-    public Loan Return(string isbn, DateOnly today)
+    public Loan Return(string copyId, DateOnly today)
     {
-        var book = FindBook(isbn)
-            ?? throw new RentalException($"找不到 ISBN {isbn} 的書，這本書沒有建檔。");
+        var copy = FindCopy(copyId)
+            ?? throw new RentalException($"找不到條碼 {copyId} 的書，這本書沒有建檔。");
 
-        var outstanding = OutstandingLoanOf(isbn)
-            ?? throw new RentalException($"《{book.Title}》目前不在外面，沒有東西可以歸還。");
+        if (!_outstandingByCopy.TryGetValue(copyId, out var outstanding))
+        {
+            throw new RentalException($"條碼 {copyId}《{_booksByIsbn[copy.Isbn].Title}》目前不在外面，沒有東西可以歸還。");
+        }
 
         if (today < outstanding.LoanDate)
         {
             throw new RentalException($"歸還日 {today:yyyy-MM-dd} 早於借出日 {outstanding.LoanDate:yyyy-MM-dd}，日期打錯了。");
         }
 
-        // Loan 是不可變的 record，所以「歸還」是用一筆填好歸還日的新紀錄，換掉舊的那一筆。
+        // Loan 是不可變的 record：用一筆填好歸還日的新紀錄換掉舊的。
+        // #01.2 用 IndexOf 找位置，靠的是「沒有兩筆完全相同的 Loan」；現在有流水號，用它找。
         var returned = outstanding with { ReturnDate = today };
-        var index = _loans.IndexOf(outstanding);
+        var index = _loans.FindIndex(l => l.LoanId == outstanding.LoanId);
         _loans[index] = returned;
+        Unindex(outstanding);
         return returned;
+    }
+
+    // ------------------------------------------------------------ 索引維護
+
+    // 兩張索引只放未歸還的借閱。借出時加進去，歸還時拿掉——這就是索引的「同步維護成本」，
+    // 忘了其中一邊，查詢就會說謊。
+    private void Index(Loan loan)
+    {
+        _outstandingByCopy[loan.CopyId] = loan;
+        if (!_outstandingByMember.TryGetValue(loan.MemberId, out var list))
+        {
+            list = [];
+            _outstandingByMember[loan.MemberId] = list;
+        }
+        list.Add(loan);
+    }
+
+    private void Unindex(Loan loan)
+    {
+        _outstandingByCopy.Remove(loan.CopyId);
+        if (_outstandingByMember.TryGetValue(loan.MemberId, out var list))
+        {
+            list.RemoveAll(l => l.LoanId == loan.LoanId);
+            if (list.Count == 0)
+            {
+                _outstandingByMember.Remove(loan.MemberId);
+            }
+        }
     }
 }

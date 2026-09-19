@@ -1,14 +1,14 @@
 using Ironman.Desk;
 using Ironman.SeedData;
 
-// 第一版櫃檯程式：載入 S 規模種子資料到記憶體，然後進入選單迴圈。
-// 程式關掉，這段時間借出、歸還的紀錄就全部消失——這是故意留下的問題，#03 處理。
+// 櫃檯程式 v2：借還改掃書背條碼（副本），查找改查表。
+// 資料仍在記憶體，程式關掉，這段時間借出、歸還的紀錄就全部消失——這是故意留下的問題，#03 處理。
 
 var desk = RentalDesk.FromSeed(SeedDataGenerator.Generate(Scale.S));
 var today = DateOnly.FromDateTime(DateTime.Today);
 
-Console.WriteLine("=== 租書店櫃檯 v1 ===");
-Console.WriteLine($"今天 {today:yyyy-MM-dd}｜書 {desk.BookCount} 本｜會員 {desk.MemberCount} 位｜借閱紀錄 {desk.LoanCount} 筆｜未歸還 {desk.AllOutstanding().Count} 筆");
+Console.WriteLine("=== 租書店櫃檯 v2 ===");
+Console.WriteLine($"今天 {today:yyyy-MM-dd}｜書 {desk.BookCount} 種 {desk.CopyCount} 本｜會員 {desk.MemberCount} 位｜借閱紀錄 {desk.LoanCount} 筆｜未歸還 {desk.OutstandingCount} 筆");
 
 while (true)
 {
@@ -24,16 +24,16 @@ while (true)
             case "1":
                 {
                     var memberId = Ask("會員編號");
-                    var isbn = Ask("ISBN");
-                    var loan = desk.Lend(memberId, isbn, today);
-                    Console.WriteLine($"借出成功：{desk.FindBook(loan.Isbn)!.Title} → {desk.FindMember(loan.MemberId)!.Name}（{loan.LoanDate:yyyy-MM-dd}）");
+                    var copyId = Ask("條碼");
+                    var loan = desk.Lend(memberId, copyId, today);
+                    Console.WriteLine($"借出成功 #{loan.LoanId}：{TitleOf(loan.CopyId)}（{loan.CopyId}） → {desk.FindMember(loan.MemberId)!.Name}（{loan.LoanDate:yyyy-MM-dd}）");
                     break;
                 }
             case "2":
                 {
-                    var isbn = Ask("ISBN");
-                    var loan = desk.Return(isbn, today);
-                    Console.WriteLine($"歸還成功：{desk.FindBook(loan.Isbn)!.Title}，借出 {loan.LoanDate:yyyy-MM-dd}，歸還 {loan.ReturnDate:yyyy-MM-dd}");
+                    var copyId = Ask("條碼");
+                    var loan = desk.Return(copyId, today);
+                    Console.WriteLine($"歸還成功 #{loan.LoanId}：{TitleOf(loan.CopyId)}（{loan.CopyId}），借出 {loan.LoanDate:yyyy-MM-dd}，歸還 {loan.ReturnDate:yyyy-MM-dd}");
                     break;
                 }
             case "3":
@@ -44,7 +44,7 @@ while (true)
                     Console.WriteLine($"{member.Name} 未歸還 {loans.Count} 本：");
                     foreach (var l in loans)
                     {
-                        Console.WriteLine($"  {l.LoanDate:yyyy-MM-dd}  {desk.FindBook(l.Isbn)!.Title}");
+                        Console.WriteLine($"  {l.LoanDate:yyyy-MM-dd}  {l.CopyId}  {TitleOf(l.CopyId)}");
                     }
                     break;
                 }
@@ -52,7 +52,15 @@ while (true)
                 {
                     var isbn = Ask("ISBN");
                     var book = desk.FindBook(isbn) ?? throw new RentalException($"找不到 ISBN {isbn} 的書。");
-                    Console.WriteLine(desk.IsAvailable(isbn) ? $"《{book.Title}》在店裡，可以借。" : $"《{book.Title}》借出中。");
+                    var copies = desk.CopiesOf(isbn);
+                    Console.WriteLine($"《{book.Title}》共 {copies.Count} 本，在店 {desk.AvailableCopiesOf(isbn).Count} 本：");
+                    foreach (var c in copies)
+                    {
+                        var held = desk.OutstandingLoanOf(c.CopyId);
+                        Console.WriteLine(held is null
+                            ? $"  {c.CopyId}  在店"
+                            : $"  {c.CopyId}  借出中（{held.LoanDate:yyyy-MM-dd} → {desk.FindMember(held.MemberId)!.Name}）");
+                    }
                     break;
                 }
             case "5":
@@ -62,7 +70,7 @@ while (true)
                     Console.WriteLine($"找到 {books.Count} 本：");
                     foreach (var b in books)
                     {
-                        Console.WriteLine($"  {b.Isbn}  {b.Title}／{b.Author}  {(desk.IsAvailable(b.Isbn) ? "在店" : "借出中")}");
+                        Console.WriteLine($"  {b.Isbn}  {b.Title}／{b.Author}  在店 {desk.AvailableCopiesOf(b.Isbn).Count}／{desk.CopiesOf(b.Isbn).Count} 本");
                     }
                     break;
                 }
@@ -86,3 +94,5 @@ static string Ask(string label)
     Console.Write($"{label}：");
     return Console.ReadLine()?.Trim() ?? string.Empty;
 }
+
+string TitleOf(string copyId) => desk.FindBook(desk.FindCopy(copyId)!.Isbn)!.Title;
