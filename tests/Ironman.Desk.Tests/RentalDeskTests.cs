@@ -6,7 +6,7 @@ namespace Ironman.Desk.Tests;
 public class RentalDeskTests
 {
     // 測試不用種子資料，自己造兩種書、三本副本、兩位會員，規則才看得清楚。
-    // 書A 買了兩本（A1、A2），書B 一本（B1）——這就是 #02 的情境。
+    // 書A 買了兩本（A1、A2），書B 一本（B1）——這就是第六天的情境。
     private static readonly Book 書A = new("9780000000002", "書A", "作者甲");
     private static readonly Book 書B = new("9780000000019", "書B", "作者乙");
     private static readonly BookCopy A1 = new("C00001", 書A.Isbn);
@@ -18,7 +18,7 @@ public class RentalDeskTests
 
     private static RentalDesk 空櫃檯() => new([書A, 書B], [A1, A2, B1], [小明, 小華], []);
 
-    // ------------------------------------------------------------ #01 就有的規則，換成副本後仍成立
+    // ------------------------------------------------------------ 第四天就有的規則，換成副本後仍成立
 
     [Fact]
     public void 借出後多一筆未歸還紀錄()
@@ -131,12 +131,12 @@ public class RentalDeskTests
         Assert.Equal(2, found.Count);
     }
 
-    // ------------------------------------------------------------ #02 新增：副本
+    // ------------------------------------------------------------ 第六天新增：副本
 
     [Fact]
     public void 同一種書的第二本可以借給別人()
     {
-        // #01 版做不到的事：《書A》第一本在小明手上，第二本還能借給小華。
+        // 第四天那一版做不到的事：《書A》第一本在小明手上，第二本還能借給小華。
         var desk = 空櫃檯();
         desk.Lend(小明.MemberId, A1.CopyId, 今天);
 
@@ -157,6 +157,19 @@ public class RentalDeskTests
 
         Assert.Contains("店裡還有另一本", ex.Message);
         Assert.Contains(A2.CopyId, ex.Message);
+    }
+
+    [Fact]
+    public void 店裡一本都不剩時被拒的訊息不會多提其他副本()
+    {
+        // 《書B》只有一本。被拒的時候店裡沒有別本可借，訊息就不該多說一句。
+        var desk = 空櫃檯();
+        desk.Lend(小明.MemberId, B1.CopyId, 今天);
+
+        var ex = Assert.Throws<RentalException>(() => desk.Lend(小華.MemberId, B1.CopyId, 今天));
+
+        Assert.Contains("借給 小明", ex.Message);
+        Assert.DoesNotContain("店裡還有", ex.Message);
     }
 
     [Fact]
@@ -193,6 +206,25 @@ public class RentalDeskTests
     }
 
     [Fact]
+    public void 已歸還的兩筆借閱可能四個欄位全等_只有流水號不同()
+    {
+        // 為什麼不靠「欄位的組合恰好不重複」找那一筆：
+        // 同一個人同一天把同一本書借走、還回來、再借一次、再還一次。
+        // Return 只擋「歸還日早於借出日」，所以當天借當天還是合法的，這個序列跑得出來。
+        var desk = 空櫃檯();
+        desk.Lend(小明.MemberId, A1.CopyId, 今天);
+        var 第一筆 = desk.Return(A1.CopyId, 今天);
+        desk.Lend(小明.MemberId, A1.CopyId, 今天);
+        var 第二筆 = desk.Return(A1.CopyId, 今天);
+
+        Assert.Equal(第一筆.MemberId, 第二筆.MemberId);
+        Assert.Equal(第一筆.CopyId, 第二筆.CopyId);
+        Assert.Equal(第一筆.LoanDate, 第二筆.LoanDate);
+        Assert.Equal(第一筆.ReturnDate, 第二筆.ReturnDate);
+        Assert.NotEqual(第一筆.LoanId, 第二筆.LoanId);
+    }
+
+    [Fact]
     public void 借閱流水號接在種子資料之後遞增()
     {
         var data = SeedDataGenerator.Generate(Scale.S);
@@ -204,7 +236,7 @@ public class RentalDeskTests
         Assert.Equal(data.Loans.Max(l => l.LoanId) + 1, loan.LoanId);
     }
 
-    // ------------------------------------------------------------ #02 新增：索引與資料一致
+    // ------------------------------------------------------------ 第六天新增：索引與資料一致
 
     [Fact]
     public void 載入種子資料後兩張索引和借閱清單一致()

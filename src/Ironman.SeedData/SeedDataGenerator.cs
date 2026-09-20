@@ -41,7 +41,7 @@ public static class SeedDataGenerator
         var members = GenerateMembers(random, profile.Members);
         var (periodStart, periodEnd) = PeriodFor(scale);
 
-        // 借閱先對「書目」排，抽籤順序和 #01 完全一樣：同一個 seed 的會員名冊、借出日、
+        // 借閱先對「書目」排，抽籤順序和第三天完全一樣：同一個 seed 的會員名冊、借出日、
         // 每本書的借閱次數都不會變，前面幾篇引用過的名字與排行榜仍然成立。
         var drafts = GenerateLoanDrafts(random, books, members, profile.Loans, periodStart, periodEnd);
 
@@ -173,7 +173,7 @@ public static class SeedDataGenerator
 
         // 借閱次數排前 15 名的書，老闆各多進一本（所以是兩本，不是三本）。
         // 同分的書很多——S 規模第 15 名那個次數就有二十幾本同分——所以名次要多一條規則才排得出來。
-        // 這裡用「次數由多到少，同分時書目順序在後的排前面」，和 #01.3 那張試算表排行榜的
+        // 這裡用「次數由多到少，同分時書目順序在後的排前面」，和第五天那張試算表排行榜的
         // 排序鍵（借閱次數 + ROW()/100000，列號大的贏）方向一致，兩邊的名次才會是同一份。
         var rankedBooks = Enumerable.Range(0, books.Count)
             .OrderByDescending(i => loanCount[i])

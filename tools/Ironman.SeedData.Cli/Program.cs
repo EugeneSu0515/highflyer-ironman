@@ -6,7 +6,7 @@ using Ironman.SeedData;
 //   dotnet run --project tools/Ironman.SeedData.Cli -- csv S books > books.csv   （books｜copies｜members｜loans）
 //
 // 這個工具只寫到標準輸出。要存成檔案請用 shell 的重導向；
-// 檔案 I/O 是 #03 的主題，這裡刻意不碰。
+// 檔案 I/O 是第八天的主題，這裡刻意不碰。
 
 var command = args.Length > 0 ? args[0] : "summary";
 var scale = args.Length > 1 ? Enum.Parse<Scale>(args[1], ignoreCase: true) : Scale.S;
@@ -69,7 +69,7 @@ static void PrintSummary(SeedDataSet data)
 }
 
 // 把借閱紀錄印成「紙本出租卡」：每本副本一張卡，卡上每一行是一次借還。
-// 這就是 #00 問題重現要列印的東西——依書名排列的一疊卡片。同一種書有兩本就是兩張卡。
+// 這就是第二天問題重現要列印的東西——依書名排列的一疊卡片。同一種書有兩本就是兩張卡。
 static void PrintCards(SeedDataSet data)
 {
     var books = data.Books.ToDictionary(b => b.Isbn);
@@ -95,7 +95,7 @@ static void PrintCards(SeedDataSet data)
     }
 }
 
-// 把一張表印成 CSV，給 #01.3 的試算表試作匯入用。
+// 把一張表印成 CSV，給第五天的試算表試作匯入用。
 // 欄位裡沒有逗號、引號或換行（書名、姓名都來自固定詞庫），所以不需要跳脫；日期用 ISO 格式，試算表都認得。
 static bool PrintCsv(SeedDataSet data, string table)
 {

@@ -68,8 +68,8 @@ public class SeedDataGeneratorTests
     [Fact]
     public void 副本依借閱次數排名分配_前十五名各兩本其餘各一本()
     {
-        // #02 新增的規則：老闆照排行榜進貨，前 15 名各多進一本。
-        // 同分時書目順序在後的排前面，和 #01.3 試算表排行榜的排序鍵（列號大的贏）同方向；
+        // 第六天新增的規則：老闆照排行榜進貨，前 15 名各多進一本。
+        // 同分時書目順序在後的排前面，和第五天試算表排行榜的排序鍵（列號大的贏）同方向；
         // 方向一旦相反，第 15 名附近二十幾本同分的書就會換一批進貨。
         var data = SeedDataGenerator.Generate(Scale.S);
         var isbnOfCopy = data.Copies.ToDictionary(c => c.CopyId, c => c.Isbn);

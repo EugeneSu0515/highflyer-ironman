@@ -2,7 +2,7 @@ using Ironman.Desk;
 using Ironman.SeedData;
 
 // 櫃檯程式 v2：借還改用封底條碼（副本），查找改查表。
-// 資料仍在記憶體，程式關掉，這段時間借出、歸還的紀錄就全部消失——這是故意留下的問題，#03 處理。
+// 資料仍在記憶體，程式關掉，這段時間借出、歸還的紀錄就全部消失——這是故意留下的問題，第八天處理。
 
 var desk = RentalDesk.FromSeed(SeedDataGenerator.Generate(Scale.S));
 var today = DateOnly.FromDateTime(DateTime.Today);
