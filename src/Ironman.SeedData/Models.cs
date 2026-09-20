@@ -19,7 +19,7 @@ public sealed record Member(string MemberId, string Name, string Phone);
 /// </summary>
 /// <remarks>
 /// #02 起 Loan 指向 <see cref="BookCopy"/> 而不是 ISBN：借出去的是那一本實體書，不是那一種書。
-/// <see cref="LoanId"/> 是每一筆借閱自己的識別，不依賴其他欄位的組合是否恰好不重複；
+/// <see cref="LoanId"/> 是每一筆借閱自己的識別，不靠其他欄位的組合是否恰好不重複；
 /// 到 #06 進資料庫時它就是主鍵。
 /// </remarks>
 public sealed record Loan(int LoanId, string MemberId, string CopyId, DateOnly LoanDate, DateOnly? ReturnDate)
