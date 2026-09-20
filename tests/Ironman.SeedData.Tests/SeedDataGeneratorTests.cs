@@ -66,6 +66,35 @@ public class SeedDataGeneratorTests
     }
 
     [Fact]
+    public void 副本依借閱次數排名分配_前十五名各兩本其餘各一本()
+    {
+        // #02 新增的規則：老闆照排行榜進貨，前 15 名各多進一本。
+        // 同分時書目順序在後的排前面，和 #01.3 試算表排行榜的排序鍵（列號大的贏）同方向；
+        // 方向一旦相反，第 15 名附近二十幾本同分的書就會換一批進貨。
+        var data = SeedDataGenerator.Generate(Scale.S);
+        var isbnOfCopy = data.Copies.ToDictionary(c => c.CopyId, c => c.Isbn);
+        var loanCount = data.Books.ToDictionary(b => b.Isbn, _ => 0);
+        foreach (var loan in data.Loans)
+        {
+            loanCount[isbnOfCopy[loan.CopyId]]++;
+        }
+
+        var copiesPerBook = data.Copies.GroupBy(c => c.Isbn).ToDictionary(g => g.Key, g => g.Count());
+        var ranked = Enumerable.Range(0, data.Books.Count)
+            .OrderByDescending(i => loanCount[data.Books[i].Isbn])
+            .ThenByDescending(i => i)
+            .ToArray();
+
+        for (var rank = 0; rank < ranked.Length; rank++)
+        {
+            var isbn = data.Books[ranked[rank]].Isbn;
+            Assert.Equal(rank < 15 ? 2 : 1, copiesPerBook[isbn]);
+        }
+
+        Assert.Equal(data.Books.Count + 15, data.Copies.Count);
+    }
+
+    [Fact]
     public void 每筆借閱都指向存在的副本與會員()
     {
         var data = SeedDataGenerator.Generate(Scale.S);

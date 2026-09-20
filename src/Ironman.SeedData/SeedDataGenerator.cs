@@ -160,7 +160,7 @@ public static class SeedDataGenerator
     }
 
     /// <summary>
-    /// 館藏副本：條碼 C00001 起依書目順序連號，貼在書背上，店員掃的是它。
+    /// 館藏副本：條碼 C00001 起依書目順序連號，貼在封底上，店員借還時填的是它。
     /// 副本數依借閱次數決定——借得最兇的那幾本，老闆才會再進一本。
     /// </summary>
     private static List<BookCopy> GenerateCopies(IReadOnlyList<Book> books, IReadOnlyList<LoanDraft> drafts)

@@ -160,6 +160,22 @@ public class RentalDeskTests
     }
 
     [Fact]
+    public void 同一種書還有兩本以上可借時提示會把每一本都列出來()
+    {
+        // 三本《書A》：A1 借走之後，A2、A3 都還在店裡。
+        // 提示訊息在這裡走的是「不只一本」那個分支，要講清楚有幾本、分別是哪幾本。
+        var A3 = new BookCopy("C00004", 書A.Isbn);
+        var desk = new RentalDesk([書A, 書B], [A1, A2, A3, B1], [小明, 小華], []);
+        desk.Lend(小明.MemberId, A1.CopyId, 今天);
+
+        var ex = Assert.Throws<RentalException>(() => desk.Lend(小華.MemberId, A1.CopyId, 今天));
+
+        Assert.Contains("店裡還有 2 本", ex.Message);
+        Assert.Contains(A2.CopyId, ex.Message);
+        Assert.Contains(A3.CopyId, ex.Message);
+    }
+
+    [Fact]
     public void 同一人同一天借同一種書的兩本_歸還其中一本不會弄錯()
     {
         // 同一種書的兩本各自借還：還 A2 結掉的必須是 A2 那一筆，不能是同一種書的另一本。

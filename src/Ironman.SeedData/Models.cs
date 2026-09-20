@@ -5,7 +5,7 @@ public sealed record Book(string Isbn, string Title, string Author);
 
 /// <summary>
 /// 館藏副本：店裡的一本實體書。同一個 ISBN 買了兩本，就是兩個 BookCopy。
-/// <see cref="CopyId"/> 是貼在書背上的條碼編號，店員借還時掃的是它，不是 ISBN。
+/// <see cref="CopyId"/> 是貼在封底上的條碼編號，店員借還時認的是它，不是 ISBN。
 /// </summary>
 /// <remarks>#02 進場。在此之前每種書只有一本，Loan 直接指向 ISBN 就夠了。</remarks>
 public sealed record BookCopy(string CopyId, string Isbn);
