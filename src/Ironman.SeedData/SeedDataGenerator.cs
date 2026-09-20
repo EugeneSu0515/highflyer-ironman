@@ -171,18 +171,27 @@ public static class SeedDataGenerator
             loanCount[d.BookIndex]++;
         }
 
-        // 前 3% 進到三本、前 15% 進到兩本；門檻用借閱次數排序取分位數，
-        // 同分的書一起進場，所以實際本數可能略多於門檻。
-        var sorted = loanCount.OrderByDescending(c => c).ToArray();
-        var threeAt = sorted[Math.Min(sorted.Length - 1, Math.Max(0, books.Count * 3 / 100 - 1))];
-        var twoAt = sorted[Math.Min(sorted.Length - 1, Math.Max(0, books.Count * 15 / 100 - 1))];
+        // 借閱次數排前 3 名進到三本、第 4～15 名進到兩本。
+        // 同分的書很多（S 規模第 15 名那個次數就有二十幾本同分），所以名次用
+        // 「次數由多到少，同分照書目順序」決定——這和第五天排行榜遇到的是同一件事：
+        // 有平手的時候，前十名沒有唯一答案，得補一個和店裡無關的規則才排得出來。
+        var rankedBooks = Enumerable.Range(0, books.Count)
+            .OrderByDescending(i => loanCount[i])
+            .ThenBy(i => i)
+            .ToArray();
+
+        var copiesFor = new int[books.Count];
+        for (var r = 0; r < rankedBooks.Length; r++)
+        {
+            copiesFor[rankedBooks[r]] = r < 3 ? 3 : r < 15 ? 2 : 1;
+        }
 
         var copies = new List<BookCopy>(books.Count + books.Count / 5);
         var next = 1;
 
         for (var i = 0; i < books.Count; i++)
         {
-            var count = loanCount[i] >= threeAt ? 3 : loanCount[i] >= twoAt ? 2 : 1;
+            var count = copiesFor[i];
             for (var k = 0; k < count; k++)
             {
                 copies.Add(new BookCopy($"C{next++:D5}", books[i].Isbn));
