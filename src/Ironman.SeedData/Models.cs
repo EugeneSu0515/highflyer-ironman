@@ -18,9 +18,9 @@ public sealed record Member(string MemberId, string Name, string Phone);
 /// <see cref="ReturnDate"/> 為 null 表示尚未歸還。
 /// </summary>
 /// <remarks>
-/// #02 起 Loan 指向 <see cref="BookCopy"/> 而不是 ISBN，並且有自己的流水號 <see cref="LoanId"/>：
-/// 有了副本之後，同一位會員同一天可能借同一種書的兩本，欄位會完全一樣，
-/// 沒有自己的編號就分不出是哪一筆（#01.2 的 IndexOf 假設在此失效）。
+/// #02 起 Loan 指向 <see cref="BookCopy"/> 而不是 ISBN：借出去的是那一本實體書，不是那一種書。
+/// <see cref="LoanId"/> 是每一筆借閱自己的識別，不依賴其他欄位的組合是否恰好不重複；
+/// 到 #06 進資料庫時它就是主鍵。
 /// </remarks>
 public sealed record Loan(int LoanId, string MemberId, string CopyId, DateOnly LoanDate, DateOnly? ReturnDate)
 {

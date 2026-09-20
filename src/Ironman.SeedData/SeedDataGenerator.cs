@@ -38,8 +38,10 @@ public static class SeedDataGenerator
         var random = new Random(seed);
 
         var books = GenerateBooks(random, profile.Books);
-        var copies = GenerateCopies(random, books);
+        // 會員要排在副本前面：這樣加入副本之後，同一個 seed 的會員名冊和 #01 完全一樣，
+        // 前面幾篇引用過的名字不會整批換人。副本與借閱本來就會變，那是這一篇要改的東西。
         var members = GenerateMembers(random, profile.Members);
+        var copies = GenerateCopies(random, books);
         var (periodStart, periodEnd) = PeriodFor(scale);
         var loans = GenerateLoans(random, copies, members, profile.Loans, periodStart, periodEnd);
 

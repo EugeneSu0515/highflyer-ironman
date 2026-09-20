@@ -7,7 +7,7 @@ public class RentalDeskTests
 {
     // 測試不用種子資料，自己造兩種書、三本副本、兩位會員，規則才看得清楚。
     // 書A 買了兩本（A1、A2），書B 一本（B1）——這就是 #02 的情境。
-    private static readonly Book 書A = new("9780000000001", "書A", "作者甲");
+    private static readonly Book 書A = new("9780000000002", "書A", "作者甲");
     private static readonly Book 書B = new("9780000000002", "書B", "作者乙");
     private static readonly BookCopy A1 = new("C00001", 書A.Isbn);
     private static readonly BookCopy A2 = new("C00002", 書A.Isbn);
@@ -121,7 +121,7 @@ public class RentalDeskTests
     public void 搜尋書名用關鍵字()
     {
         var desk = new RentalDesk(
-            [new("9780000000001", "深夜的咖啡館", "甲"), new("9780000000002", "海邊的咖啡館", "乙"), new("9780000000003", "冬季約定", "丙")],
+            [new("9780000000002", "深夜的咖啡館", "甲"), new("9780000000002", "海邊的咖啡館", "乙"), new("9780000000026", "冬季約定", "丙")],
             [],
             [小明],
             []);
@@ -162,7 +162,7 @@ public class RentalDeskTests
     [Fact]
     public void 同一人同一天借同一種書的兩本_歸還其中一本不會弄錯()
     {
-        // #01.2 的 IndexOf 靠「沒有兩筆完全相同的 Loan」，這個情境會讓它失效；流水號解決這件事。
+        // 同一種書的兩本各自借還：還 A2 結掉的必須是 A2 那一筆，不能是同一種書的另一本。
         var desk = 空櫃檯();
         var first = desk.Lend(小明.MemberId, A1.CopyId, 今天);
         var second = desk.Lend(小明.MemberId, A2.CopyId, 今天);

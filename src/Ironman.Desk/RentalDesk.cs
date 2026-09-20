@@ -126,7 +126,7 @@ public sealed class RentalDesk
         }
 
         // Loan 是不可變的 record：用一筆填好歸還日的新紀錄換掉舊的。
-        // #01.2 用 IndexOf 找位置，靠的是「沒有兩筆完全相同的 Loan」；現在有流水號，用它找。
+        // 每一筆借閱有自己的流水號，就用它找位置，不必靠欄位的組合是否恰好不重複。
         var returned = outstanding with { ReturnDate = today };
         var index = _loans.FindIndex(l => l.LoanId == outstanding.LoanId);
         _loans[index] = returned;
