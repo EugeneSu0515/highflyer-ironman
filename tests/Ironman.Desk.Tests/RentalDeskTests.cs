@@ -8,7 +8,7 @@ public class RentalDeskTests
     // 測試不用種子資料，自己造兩種書、三本副本、兩位會員，規則才看得清楚。
     // 書A 買了兩本（A1、A2），書B 一本（B1）——這就是 #02 的情境。
     private static readonly Book 書A = new("9780000000002", "書A", "作者甲");
-    private static readonly Book 書B = new("9780000000002", "書B", "作者乙");
+    private static readonly Book 書B = new("9780000000019", "書B", "作者乙");
     private static readonly BookCopy A1 = new("C00001", 書A.Isbn);
     private static readonly BookCopy A2 = new("C00002", 書A.Isbn);
     private static readonly BookCopy B1 = new("C00003", 書B.Isbn);
@@ -121,7 +121,7 @@ public class RentalDeskTests
     public void 搜尋書名用關鍵字()
     {
         var desk = new RentalDesk(
-            [new("9780000000002", "深夜的咖啡館", "甲"), new("9780000000002", "海邊的咖啡館", "乙"), new("9780000000026", "冬季約定", "丙")],
+            [new("9780000000002", "深夜的咖啡館", "甲"), new("9780000000019", "海邊的咖啡館", "乙"), new("9780000000026", "冬季約定", "丙")],
             [],
             [小明],
             []);
