@@ -19,7 +19,7 @@ public static class SeedDataGenerator
     /// <summary>
     /// 借閱期間。每本書一年最多排得下十來筆借閱（平均週期約 26 天），
     /// 所以期間長度依「每本書平均借閱次數」回推，並保留 1.5 倍餘裕；最短一年。
-    /// S 約一年、M 約三年、L 約六年——這也符合系列故事：資料量是店開了幾年後累積出來的。
+    /// S 一年、M 約兩年八個月、L 約五年四個月——這也符合系列故事：資料量是店開了幾年後累積出來的。
     /// </summary>
     public static (DateOnly Start, DateOnly End) PeriodFor(Scale scale)
     {
