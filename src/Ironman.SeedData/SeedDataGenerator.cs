@@ -171,19 +171,19 @@ public static class SeedDataGenerator
             loanCount[d.BookIndex]++;
         }
 
-        // 借閱次數排前 3 名進到三本、第 4～15 名進到兩本。
-        // 同分的書很多（S 規模第 15 名那個次數就有二十幾本同分），所以名次用
-        // 「次數由多到少，同分照書目順序」決定——這和第五天排行榜遇到的是同一件事：
-        // 有平手的時候，前十名沒有唯一答案，得補一個和店裡無關的規則才排得出來。
+        // 借閱次數排前 15 名的書，老闆各多進一本（所以是兩本，不是三本）。
+        // 同分的書很多——S 規模第 15 名那個次數就有二十幾本同分——所以名次要多一條規則才排得出來。
+        // 這裡用「次數由多到少，同分時書目順序在後的排前面」，和 #01.3 那張試算表排行榜的
+        // 排序鍵（借閱次數 + ROW()/100000，列號大的贏）方向一致，兩邊的名次才會是同一份。
         var rankedBooks = Enumerable.Range(0, books.Count)
             .OrderByDescending(i => loanCount[i])
-            .ThenBy(i => i)
+            .ThenByDescending(i => i)
             .ToArray();
 
         var copiesFor = new int[books.Count];
         for (var r = 0; r < rankedBooks.Length; r++)
         {
-            copiesFor[rankedBooks[r]] = r < 3 ? 3 : r < 15 ? 2 : 1;
+            copiesFor[rankedBooks[r]] = r < 15 ? 2 : 1;
         }
 
         var copies = new List<BookCopy>(books.Count + books.Count / 5);

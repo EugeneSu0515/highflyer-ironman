@@ -98,7 +98,9 @@ public sealed class RentalDesk
             var title = _booksByIsbn[copy.Isbn].Title;
             var holder = FindMember(outstanding.MemberId)?.Name ?? outstanding.MemberId;
             var others = AvailableCopiesOf(copy.Isbn);
-            var hint = others.Count > 0 ? $"店裡還有另一本《{title}》：{string.Join("、", others.Select(c => c.CopyId))}。" : "";
+            var hint = others.Count == 0 ? ""
+                : others.Count == 1 ? $"店裡還有另一本《{title}》：{others[0].CopyId}。"
+                : $"店裡還有 {others.Count} 本《{title}》可借：{string.Join("、", others.Select(c => c.CopyId))}。";
             throw new RentalException($"條碼 {copyId}《{title}》已經在 {outstanding.LoanDate:yyyy-MM-dd} 借給 {holder}，還沒回來。{hint}");
         }
 
