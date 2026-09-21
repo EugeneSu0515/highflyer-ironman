@@ -225,6 +225,43 @@ public class RentalDeskTests
     }
 
     [Fact]
+    public void 歸還改到的是正確那一筆_不論它排在借閱清單的哪個位置()
+    {
+        // 第七天補位置索引之後的保險：借三本、還第一本，
+        // 結束時只剩後兩本在外面，被結掉的必須是第一本那一筆。
+        var desk = 空櫃檯();
+        var 第一筆 = desk.Lend(小明.MemberId, A1.CopyId, 今天);
+        desk.Lend(小明.MemberId, A2.CopyId, 今天);
+        desk.Lend(小華.MemberId, B1.CopyId, 今天);
+
+        var returned = desk.Return(A1.CopyId, 今天.AddDays(2));
+
+        Assert.Equal(第一筆.LoanId, returned.LoanId);
+        Assert.Equal(今天.AddDays(2), returned.ReturnDate);
+        Assert.Equal(2, desk.OutstandingCount);
+        Assert.True(desk.IsAvailable(A1.CopyId));
+    }
+
+    [Fact]
+    public void 歸還種子資料裡的既有借閱也會改到正確那一筆()
+    {
+        // 上一條測的是 Lend 當場寫進去的位置；這一條測的是建構式替載入資料建的那張位置表。
+        // 店開門之後第一筆歸還，還的幾乎一定是昨天就借出去的那些。
+        var data = SeedDataGenerator.Generate(Scale.S);
+        var desk = RentalDesk.FromSeed(data);
+        var 既有 = data.Loans.First(l => !l.IsReturned);
+        var 還書日 = 既有.LoanDate.AddDays(5);
+
+        var returned = desk.Return(既有.CopyId, 還書日);
+
+        Assert.Equal(既有.LoanId, returned.LoanId);
+        Assert.Equal(既有.CopyId, returned.CopyId);
+        Assert.Equal(還書日, returned.ReturnDate);
+        Assert.True(desk.IsAvailable(既有.CopyId));
+        Assert.Equal(data.Loans.Count(l => !l.IsReturned) - 1, desk.OutstandingCount);
+    }
+
+    [Fact]
     public void 借閱流水號接在種子資料之後遞增()
     {
         var data = SeedDataGenerator.Generate(Scale.S);

@@ -10,6 +10,8 @@ namespace Ironman.Desk;
 /// 1. 借還的對象從「書目（ISBN）」變成「副本（CopyId）」——同一種書買了兩本，兩本可以同時在外面。
 /// 2. 查找從 List 線性掃描改成 Dictionary 查表：依副本、依會員各一張，借出與歸還時同步維護。
 ///    所有借閱的歷史仍留在 _loans，索引只放「還沒回來的」。
+/// 第七天補的一張：LoanId → 那一筆在 _loans 裡的位置。量測發現歸還還在掃 _loans，
+/// 兩張未歸還索引放的是 Loan 本身、不是它的位置，幫不上忙。
 /// 沒變的：資料還是在記憶體，程式關掉就沒了（第八天處理）。
 /// </remarks>
 public sealed class RentalDesk
@@ -22,6 +24,7 @@ public sealed class RentalDesk
     private readonly List<Loan> _loans;
     private readonly Dictionary<string, Loan> _outstandingByCopy;              // CopyId → 那一筆未歸還
     private readonly Dictionary<string, List<Loan>> _outstandingByMember;      // MemberId → 手上所有未歸還
+    private readonly Dictionary<int, int> _positionById;                       // LoanId → 在 _loans 裡的位置（第七天量測補的）
     private int _nextLoanId;
 
     public RentalDesk(IEnumerable<Book> books, IEnumerable<BookCopy> copies, IEnumerable<Member> members, IEnumerable<Loan> loans)
@@ -32,6 +35,12 @@ public sealed class RentalDesk
         _membersById = members.ToDictionary(m => m.MemberId);
 
         _loans = loans.ToList();
+        _positionById = new Dictionary<int, int>(_loans.Count);
+        for (var i = 0; i < _loans.Count; i++)
+        {
+            _positionById.Add(_loans[i].LoanId, i); // 流水號重複的話在這裡就會炸，和 ToDictionary 一樣是故意的
+        }
+
         _outstandingByCopy = new Dictionary<string, Loan>();
         _outstandingByMember = new Dictionary<string, List<Loan>>();
         foreach (var loan in _loans.Where(l => !l.IsReturned))
@@ -105,6 +114,7 @@ public sealed class RentalDesk
         }
 
         var loan = new Loan(_nextLoanId++, member.MemberId, copy.CopyId, today, ReturnDate: null);
+        _positionById[loan.LoanId] = _loans.Count;
         _loans.Add(loan);
         Index(loan);
         return loan;
@@ -128,10 +138,11 @@ public sealed class RentalDesk
         }
 
         // Loan 是不可變的 record：用一筆填好歸還日的新紀錄換掉舊的。
-        // 每一筆借閱有自己的流水號，就用它找位置，不必靠欄位的組合是否恰好不重複。
+        // 第四天用 IndexOf 找位置，靠的是「沒有兩筆完全相同的 Loan」；第六天改成 FindIndex 用流水號找，
+        // 但還是從頭掃到尾——第七天的量測把它抓出來了。現在用 LoanId 直接查位置：
+        // _loans 只會 Add 和原地替換，不會插入或刪除，所以每一筆的位置從進來那一刻起就不會變。
         var returned = outstanding with { ReturnDate = today };
-        var index = _loans.FindIndex(l => l.LoanId == outstanding.LoanId);
-        _loans[index] = returned;
+        _loans[_positionById[outstanding.LoanId]] = returned;
         Unindex(outstanding);
         return returned;
     }
