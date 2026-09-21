@@ -46,6 +46,8 @@ dotnet run --project src/Ironman.Desk   # 第一版櫃檯程式
 | `day04` | 借還規則的十條測試 |
 | `day05` | 試算表版試作與 CSV 匯出 |
 | `day06` | 館藏副本、借閱流水號與查找表 |
+| `day07-bench` | 量測工具（Return 尚未補位置索引） |
+| `day07` | 位置索引與第一次量測 |
 
 ## 授權
 

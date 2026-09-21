@@ -1,0 +1,14 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Ironman.SeedData -> /Users/eugenesu/Repos/highflyer-ironman/src/Ironman.SeedData/bin/Debug/net10.0/Ironman.SeedData.dll
+  Ironman.Desk -> /Users/eugenesu/Repos/highflyer-ironman/src/Ironman.Desk/bin/Debug/net10.0/Ironman.Desk.dll
+  Ironman.SeedData.Tests -> /Users/eugenesu/Repos/highflyer-ironman/tests/Ironman.SeedData.Tests/bin/Debug/net10.0/Ironman.SeedData.Tests.dll
+Test run for /Users/eugenesu/Repos/highflyer-ironman/tests/Ironman.SeedData.Tests/bin/Debug/net10.0/Ironman.SeedData.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Ironman.Desk.Tests -> /Users/eugenesu/Repos/highflyer-ironman/tests/Ironman.Desk.Tests/bin/Debug/net10.0/Ironman.Desk.Tests.dll
+Test run for /Users/eugenesu/Repos/highflyer-ironman/tests/Ironman.Desk.Tests/bin/Debug/net10.0/Ironman.Desk.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    19, Skipped:     0, Total:    19, Duration: 51 ms - Ironman.SeedData.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    20, Skipped:     0, Total:    20, Duration: 27 ms - Ironman.Desk.Tests.dll (net10.0)
