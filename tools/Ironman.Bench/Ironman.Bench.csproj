@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Ironman.Desk\Ironman.Desk.csproj" />
+    <ProjectReference Include="..\..\src\Ironman.SeedData\Ironman.SeedData.csproj" />
+  </ItemGroup>
+</Project>
