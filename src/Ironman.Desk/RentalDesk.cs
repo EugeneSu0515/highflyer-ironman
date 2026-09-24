@@ -59,6 +59,12 @@ public sealed class RentalDesk
     public int LoanCount => _loans.Count;
     public int OutstandingCount => _outstandingByCopy.Count;
 
+    // 第八天存檔要用：四份資料原樣拿出去，順序固定，存出來的檔案才不會每次都長不一樣。
+    public IReadOnlyList<Book> Books => _booksByIsbn.Values.ToList();
+    public IReadOnlyList<BookCopy> Copies => _copiesById.Values.ToList();
+    public IReadOnlyList<Member> Members => _membersById.Values.ToList();
+    public IReadOnlyList<Loan> Loans => _loans;
+
     // ------------------------------------------------------------ 查詢
 
     public Book? FindBook(string isbn) => _booksByIsbn.GetValueOrDefault(isbn);

@@ -1,13 +1,21 @@
 using Ironman.Desk;
 using Ironman.SeedData;
 
-// 櫃檯程式 v2：借還改用封底條碼（副本），查找改查表。
-// 資料仍在記憶體，程式關掉，這段時間借出、歸還的紀錄就全部消失——這是故意留下的問題，第八天處理。
+// 櫃檯程式 v3：資料存進 data/ 底下四個 JSON 檔。
+// 第一次跑用種子資料建檔，之後每一次開機都從檔案讀回來；借出、歸還之後只重寫借閱檔。
 
-var desk = RentalDesk.FromSeed(SeedDataGenerator.Generate(Scale.S));
+var store = new JsonStore(Path.Combine(AppContext.BaseDirectory, "data"));
+var 第一次 = !store.Exists();
+if (第一次)
+{
+    store.SaveAll(RentalDesk.FromSeed(SeedDataGenerator.Generate(Scale.S)));
+}
+
+var desk = store.Load();
 var today = DateOnly.FromDateTime(DateTime.Today);
 
-Console.WriteLine("=== 租書店櫃檯 v2 ===");
+Console.WriteLine("=== 租書店櫃檯 v3 ===");
+Console.WriteLine(第一次 ? $"第一次開店，用種子資料建了檔：{store.Directory}" : $"從檔案讀回來：{store.Directory}");
 Console.WriteLine($"今天 {today:yyyy-MM-dd}｜書 {desk.BookCount} 種 {desk.CopyCount} 本｜會員 {desk.MemberCount} 位｜借閱紀錄 {desk.LoanCount} 筆｜未歸還 {desk.OutstandingCount} 筆");
 
 while (true)
@@ -26,6 +34,7 @@ while (true)
                     var memberId = Ask("會員編號");
                     var copyId = Ask("條碼");
                     var loan = desk.Lend(memberId, copyId, today);
+                    store.SaveLoans(desk);
                     Console.WriteLine($"借出成功 #{loan.LoanId}：{TitleOf(loan.CopyId)}（{loan.CopyId}） → {desk.FindMember(loan.MemberId)!.Name}（{loan.LoanDate:yyyy-MM-dd}）");
                     break;
                 }
@@ -33,6 +42,7 @@ while (true)
                 {
                     var copyId = Ask("條碼");
                     var loan = desk.Return(copyId, today);
+                    store.SaveLoans(desk);
                     Console.WriteLine($"歸還成功 #{loan.LoanId}：{TitleOf(loan.CopyId)}（{loan.CopyId}），借出 {loan.LoanDate:yyyy-MM-dd}，歸還 {loan.ReturnDate:yyyy-MM-dd}");
                     break;
                 }

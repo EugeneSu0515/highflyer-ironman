@@ -35,7 +35,7 @@ var outstanding = data.Loans.Where(l => !l.IsReturned).Select(l => l.CopyId).ToH
 var lendCopies = data.Copies.Where(c => !outstanding.Contains(c.CopyId)).Select(c => c.CopyId).Take(Ops).ToArray();
 var lendMembers = lendCopies.Select(_ => data.Members[rng.Next(data.Members.Count)].MemberId).ToArray();
 
-Console.WriteLine($"{"操作",-28}{"線性 List",14}{"Dictionary",14}{"倍數",10}");
+Console.WriteLine(L("操作", 28) + R("線性 List", 14) + R("Dictionary", 14) + R("倍數", 10));
 Console.WriteLine(new string('─', 66));
 
 // 這一列量的是建立本身：setup 什麼都不做，被計時的就是建櫃檯這件事。
@@ -63,6 +63,19 @@ Report($"借出＋歸還 ×{lendCopies.Length:N0}",
 Console.WriteLine();
 Console.WriteLine("搜尋書名沒有換做法，兩邊都是線性掃描，所以沒有這一列。");
 
+// 第八天：整檔重寫一次要多久、四個檔讀回來要多久。存到暫存資料夾，量完刪掉。
+var tmp = Path.Combine(Path.GetTempPath(), "Ironman.Bench", Guid.NewGuid().ToString("N"));
+var store = new JsonStore(tmp);
+var indexed = RentalDesk.FromSeed(data);
+store.SaveAll(indexed);
+var loansKb = new FileInfo(store.LoansPath).Length / 1024.0;
+
+Console.WriteLine();
+Console.WriteLine($"JsonStore（loans.json {loansKb:N0} KB，{data.Loans.Count:N0} 筆）");
+Console.WriteLine(L("SaveLoans 一次（整檔重寫）", 28) + R(Fmt(Median(() => () => store.SaveLoans(indexed))), 14));
+Console.WriteLine(L("Load 四個檔並建索引", 28) + R(Fmt(Median(() => () => { _ = store.Load(); })), 14));
+Directory.Delete(tmp, recursive: true);
+
 return;
 
 static void Cycle(string[] members, string[] copies, DateOnly today,
@@ -81,7 +94,7 @@ static void Report(string label, Func<Action> linearSetup, Func<Action> indexedS
     var linear = Median(linearSetup);
     var indexed = Median(indexedSetup);
     var ratio = indexed.TotalMilliseconds > 0 ? linear.TotalMilliseconds / indexed.TotalMilliseconds : double.PositiveInfinity;
-    Console.WriteLine($"{label,-28}{Fmt(linear),14}{Fmt(indexed),14}{ratio,9:N1}x");
+    Console.WriteLine(L(label, 28) + R(Fmt(linear), 14) + R(Fmt(indexed), 14) + R($"{ratio:N1}x", 10));
 }
 
 static TimeSpan Median(Func<Action> setup)
@@ -101,6 +114,31 @@ static TimeSpan Median(Func<Action> setup)
     samples.Sort();
     return samples[Rounds / 2];
 }
+
+// 中文在等寬字型裡佔兩格，C# 的 {x,-28} 數的是字元不是格數，所以欄位會各自跑掉。
+// 這兩個補位函式改成按顯示寬度算，表格才對得齊。
+static string L(string text, int width) => text + new string(' ', Math.Max(0, width - Width(text)));
+
+static string R(string text, int width) => new string(' ', Math.Max(0, width - Width(text))) + text;
+
+static int Width(string text)
+{
+    var w = 0;
+    foreach (var c in text)
+    {
+        w += IsWide(c) ? 2 : 1;
+    }
+    return w;
+}
+
+// 東亞全形範圍：中日韓文字、全形標點、注音等。其餘一律當半形。
+static bool IsWide(char c) =>
+    (c >= '\u1100' && c <= '\u115F') || (c >= '\u2E80' && c <= '\u303E') ||
+    (c >= '\u3041' && c <= '\u33FF') || (c >= '\u3400' && c <= '\u4DBF') ||
+    (c >= '\u4E00' && c <= '\u9FFF') || (c >= '\uA000' && c <= '\uA4CF') ||
+    (c >= '\uAC00' && c <= '\uD7A3') || (c >= '\uF900' && c <= '\uFAFF') ||
+    (c >= '\uFE30' && c <= '\uFE6F') || (c >= '\uFF00' && c <= '\uFF60') ||
+    (c >= '\uFFE0' && c <= '\uFFE6');
 
 static string Fmt(TimeSpan t) =>
     t.TotalMilliseconds >= 1000 ? $"{t.TotalSeconds:N2} s"
