@@ -48,6 +48,7 @@ dotnet run --project src/Ironman.Desk   # 第一版櫃檯程式
 | `day06` | 館藏副本、借閱流水號與查找表 |
 | `day07-bench` | 量測工具（Return 尚未補位置索引） |
 | `day07` | 位置索引與第一次量測 |
+| `day08` | JSON 存檔：一個實體一個檔 |
 
 ## 授權
 

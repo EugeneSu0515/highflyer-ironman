@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Ironman.SeedData;
 
 /// <summary>書目資料。對應紙卡：借閱卡上緣的書名、作者、ISBN。</summary>
@@ -24,6 +26,12 @@ public sealed record Member(string MemberId, string Name, string Phone);
 /// </remarks>
 public sealed record Loan(int LoanId, string MemberId, string CopyId, DateOnly LoanDate, DateOnly? ReturnDate)
 {
+    /// <summary>
+    /// 算出來的，不是存起來的。第八天存檔時發現它也被寫進 JSON 了——
+    /// 同一件事在檔案裡有兩份，手動改了 ReturnDate 沒改它，檔案就自己跟自己打架。
+    /// 加上 JsonIgnore，檔案裡只留 ReturnDate 這個唯一的事實來源。
+    /// </summary>
+    [JsonIgnore]
     public bool IsReturned => ReturnDate is not null;
 }
 

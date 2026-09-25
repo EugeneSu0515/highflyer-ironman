@@ -58,6 +58,20 @@ public class JsonStoreTests : IDisposable
     }
 
     [Fact]
+    public void 借閱檔裡不存算得出來的欄位()
+    {
+        // IsReturned 是 ReturnDate 推出來的。存進檔案就是同一件事有兩份，
+        // 手動改了一邊沒改另一邊，檔案就自己跟自己打架。
+        var store = new JsonStore(_dir);
+        store.SaveAll(RentalDesk.FromSeed(SeedDataGenerator.Generate(Scale.S)));
+
+        var text = File.ReadAllText(store.LoansPath);
+
+        Assert.DoesNotContain("IsReturned", text);
+        Assert.Contains("ReturnDate", text);
+    }
+
+    [Fact]
     public void 借出之後只重寫借閱檔名冊那三個檔不會被動到()
     {
         var data = SeedDataGenerator.Generate(Scale.S);

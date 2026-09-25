@@ -15,7 +15,9 @@ var desk = store.Load();
 var today = DateOnly.FromDateTime(DateTime.Today);
 
 Console.WriteLine("=== 租書店櫃檯 v3 ===");
-Console.WriteLine(第一次 ? $"第一次開店，用種子資料建了檔：{store.Directory}" : $"從檔案讀回來：{store.Directory}");
+// 只印資料夾名，不印整串路徑——那是這台機器的事，不是這家店的事。
+var 資料夾 = Path.GetFileName(store.Directory.TrimEnd(Path.DirectorySeparatorChar));
+Console.WriteLine(第一次 ? $"第一次開店，用種子資料建了 {資料夾}/ 底下四個檔" : $"從 {資料夾}/ 底下四個檔讀回來");
 Console.WriteLine($"今天 {today:yyyy-MM-dd}｜書 {desk.BookCount} 種 {desk.CopyCount} 本｜會員 {desk.MemberCount} 位｜借閱紀錄 {desk.LoanCount} 筆｜未歸還 {desk.OutstandingCount} 筆");
 
 while (true)
