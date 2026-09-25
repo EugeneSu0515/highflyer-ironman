@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Ironman.Desk;
 using Ironman.SeedData;
 using Xunit;
@@ -94,14 +95,41 @@ public class JsonStoreTests : IDisposable
     }
 
     [Fact]
-    public void 少一個檔就當成沒有資料()
+    public void 三種狀態要分得開()
     {
         var store = new JsonStore(_dir);
+        Directory.CreateDirectory(_dir);
+        Assert.Equal(StoreState.Empty, store.State());
+
         store.SaveAll(RentalDesk.FromSeed(SeedDataGenerator.Generate(Scale.S)));
-        Assert.True(store.Exists());
+        Assert.Equal(StoreState.Complete, store.State());
 
         File.Delete(store.MembersPath);
 
-        Assert.False(store.Exists());
+        // 這一條是重點：少一個檔不能被當成「第一次開店」，否則剩下三個檔會被種子資料蓋掉。
+        Assert.Equal(StoreState.Incomplete, store.State());
+        Assert.Equal(["members.json"], store.MissingFiles());
+    }
+
+    [Fact]
+    public void 少一個檔的時候剩下的檔不會被動到()
+    {
+        var store = new JsonStore(_dir);
+        var data = SeedDataGenerator.Generate(Scale.S);
+        var desk = RentalDesk.FromSeed(data);
+        store.SaveAll(desk);
+
+        // 先讓借閱檔和種子資料不一樣，這樣被蓋掉就看得出來。
+        var 可借 = data.Copies.First(c => desk.IsAvailable(c.CopyId));
+        desk.Lend(data.Members[0].MemberId, 可借.CopyId, new DateOnly(2026, 1, 5));
+        store.SaveLoans(desk);
+        var 借閱檔 = File.ReadAllBytes(store.LoansPath);
+
+        File.Delete(store.MembersPath);
+
+        // 櫃檯在這個狀態下不會呼叫 SaveAll，所以借閱檔必須一個位元組都沒變。
+        Assert.Equal(StoreState.Incomplete, store.State());
+        Assert.Equal(借閱檔, File.ReadAllBytes(store.LoansPath));
+        Assert.Equal(data.Loans.Count + 1, JsonDocument.Parse(借閱檔).RootElement.GetArrayLength());
     }
 }

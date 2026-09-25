@@ -5,7 +5,17 @@ using Ironman.SeedData;
 // 第一次跑用種子資料建檔，之後每一次開機都從檔案讀回來；借出、歸還之後只重寫借閱檔。
 
 var store = new JsonStore(Path.Combine(AppContext.BaseDirectory, "data"));
-var 第一次 = !store.Exists();
+var state = store.State();
+
+// 少了幾個檔是事故，不是第一次開店。這裡停下來，不去碰剩下那幾個還好好的檔。
+if (state is StoreState.Incomplete)
+{
+    Console.WriteLine($"✗ data/ 底下少了：{string.Join("、", store.MissingFiles())}");
+    Console.WriteLine("剩下的檔沒有被動過。先確認是不是誤刪，再決定要不要整個重建。");
+    return;
+}
+
+var 第一次 = state is StoreState.Empty;
 if (第一次)
 {
     store.SaveAll(RentalDesk.FromSeed(SeedDataGenerator.Generate(Scale.S)));
