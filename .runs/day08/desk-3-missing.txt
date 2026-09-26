@@ -1,2 +1,21 @@
+--- 刪檔前 ---
+9578 Sep 26 11:59 books.json
+7017 Sep 26 11:59 copies.json
+69229 Sep 26 11:59 loans.json
+3522 Sep 26 11:59 members.json
+be2e85eb55fac8adb2688780a91194a6f2cc1df9  books.json
+0fa56d382556309f387ccbc6401b7225a5091f3e  copies.json
+651fa4dc3d196ad5dca35d1fd91bd081e377a20d  loans.json
+49d3bb00e038f8e04fbd697efc25d1a4b78b6505  members.json
+
+--- 少了 members.json，再開一次 ---
 ✗ data/ 底下少了：members.json
 剩下的檔沒有被動過。先確認是不是誤刪，再決定要不要整個重建。
+
+--- 啟動之後 ---
+9578 Sep 26 11:59 books.json
+7017 Sep 26 11:59 copies.json
+69229 Sep 26 11:59 loans.json
+be2e85eb55fac8adb2688780a91194a6f2cc1df9  books.json
+0fa56d382556309f387ccbc6401b7225a5091f3e  copies.json
+651fa4dc3d196ad5dca35d1fd91bd081e377a20d  loans.json
